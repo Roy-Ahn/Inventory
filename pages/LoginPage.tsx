@@ -1,30 +1,51 @@
 
 import React, { useState } from 'react';
-import { MOCK_USERS } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
-import { Page } from '../types';
+import { Page, Role } from '../types';
 
 interface LoginPageProps {
     onNavigate: (page: Page) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
-  const [selectedUserId, setSelectedUserId] = useState(MOCK_USERS[0]?.id || '');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<Role>('BUYER');
   const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const { signUp, signIn, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!selectedUserId) {
-        setError('Please select a user to log in.');
+
+    if (isSignUp) {
+      if (!name || !email || !password) {
+        setError('Please fill in all fields.');
         return;
-    }
-    try {
-        await login(selectedUserId);
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
+      }
+      try {
+        await signUp(name, email, password, role);
         onNavigate('dashboard');
-    } catch (err) {
-        setError('Failed to log in. Please try again.');
+      } catch (err: any) {
+        setError(err.message || 'Failed to sign up. Please try again.');
+      }
+    } else {
+      if (!email || !password) {
+        setError('Please fill in email and password.');
+        return;
+      }
+      try {
+        await signIn(email, password);
+        onNavigate('dashboard');
+      } catch (err: any) {
+        setError(err.message || 'Failed to sign in. Please check your credentials.');
+      }
     }
   };
 
@@ -32,34 +53,93 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     <div className="relative min-h-[calc(100vh-132px)] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-300 z-0"></div>
       <div className="relative z-10 w-full max-w-md bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">Welcome Back</h1>
-        <p className="text-center text-gray-500 mb-6">Select a profile to sign in.</p>
+        <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
+          {isSignUp ? 'Create Account' : 'Welcome Back'}
+        </h1>
+        <p className="text-center text-gray-500 mb-6">
+          {isSignUp ? 'Sign up to get started' : 'Sign in to your account'}
+        </p>
         <form onSubmit={handleSubmit}>
+          {isSignUp && (
+            <div className="mb-4">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Full Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your name"
+              />
+            </div>
+          )}
           <div className="mb-4">
-            <label htmlFor="user-select" className="block text-sm font-medium text-gray-700 mb-1">
-              Login As
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
             </label>
-            <select
-              id="user-select"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {MOCK_USERS.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.role})
-                </option>
-              ))}
-            </select>
+              placeholder="Enter your email"
+            />
           </div>
-           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
+          <div className="mb-4">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your password"
+            />
+          </div>
+          {isSignUp && (
+            <div className="mb-4">
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                Role
+              </label>
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as Role)}
+                className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="BUYER">Buyer</option>
+                <option value="SELLER">Seller</option>
+              </select>
+            </div>
+          )}
+          {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           <button
             type="submit"
             disabled={isLoading}
             className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400"
           >
-            {isLoading ? 'Signing In...' : 'Sign In'}
+            {isLoading ? (isSignUp ? 'Signing Up...' : 'Signing In...') : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError('');
+                setName('');
+                setEmail('');
+                setPassword('');
+              }}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            </button>
+          </div>
         </form>
       </div>
     </div>

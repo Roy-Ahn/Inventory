@@ -21,8 +21,8 @@ const NavLink: React.FC<{
 const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   const { currentUser, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     onNavigate('home');
   };
 
