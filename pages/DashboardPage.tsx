@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
-import { getBookingsForUser } from '../services/storageService';
+import React, { useMemo } from 'react';
 import { Booking, Space, Page } from '../types';
 import Spinner from '../components/Spinner';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 
 interface DashboardPageProps {
   onNavigate: (page: Page, spaceId?: string) => void;
@@ -15,28 +15,20 @@ interface PopulatedBooking {
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
-  const [bookings, setBookings] = useState<PopulatedBooking[]>([]);
-  const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
+  const { bookings: allBookings, spaces, isLoading: loading } = useData();
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      if (!currentUser) {
-        setLoading(false);
-        return;
-      };
-      try {
-        setLoading(true);
-        const data = await getBookingsForUser(currentUser.id);
-        setBookings(data);
-      } catch (error) {
-        console.error("Failed to fetch bookings:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBookings();
-  }, [currentUser]);
+  // Filter bookings for current user and populate with space data
+  const bookings = useMemo<PopulatedBooking[]>(() => {
+    if (!currentUser) return [];
+    
+    return allBookings
+      .filter(booking => booking.userId === currentUser.id)
+      .map(booking => ({
+        booking,
+        space: spaces.find(space => space.id === booking.spaceId),
+      }));
+  }, [allBookings, spaces, currentUser]);
 
   if (!currentUser) {
     // This case is handled by router in App.tsx, but as a fallback:
