@@ -1,5 +1,5 @@
 {
-  "name": "StoreAway",
+  "name": "Inventory",
   "description": "A modern web platform where users can easily browse, find, and book storage spaces that fit their needs. The application features a clean, minimal design with intuitive navigation and management dashboards for both users and administrators.",
   "requestFramePermissions": []
 }

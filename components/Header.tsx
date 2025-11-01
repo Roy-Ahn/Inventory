@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Page } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
       <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
         <div className="flex items-center">
           <button onClick={() => onNavigate('home')} className="text-2xl font-bold text-blue-600">
-            StoreAway
+            Inventory
           </button>
         </div>
         <div className="hidden md:flex items-center space-x-1">

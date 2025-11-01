@@ -112,6 +112,22 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Description</h2>
             <p className="text-gray-600 leading-relaxed">{space.description}</p>
           </div>
+          
+          <div className="mt-8 bg-white p-8 rounded-2xl shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Location</h2>
+            <div className="w-full h-80 rounded-lg overflow-hidden border border-gray-200">
+              <iframe
+                title="Space Location"
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(space.location)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen={false}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              ></iframe>
+            </div>
+          </div>
         </div>
 
         <div className="lg:col-span-2">
