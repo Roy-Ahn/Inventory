@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Page, Role } from '../types';
+import { Page } from '../types';
 
 interface LoginPageProps {
     onNavigate: (page: Page) => void;
@@ -12,7 +12,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('BUYER');
   const [error, setError] = useState('');
   const { signUp, signIn, isLoading } = useAuth();
 
@@ -30,7 +29,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
         return;
       }
       try {
-        await signUp(name, email, password, role);
+        await signUp(name, email, password);
         onNavigate('dashboard');
       } catch (err: any) {
         setError(err.message || 'Failed to sign up. Please try again.');
@@ -101,22 +100,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               placeholder="Enter your password"
             />
           </div>
-          {isSignUp && (
-            <div className="mb-4">
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                Role
-              </label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="BUYER">Buyer</option>
-                <option value="SELLER">Seller</option>
-              </select>
-            </div>
-          )}
           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           <button
             type="submit"

@@ -5,9 +5,10 @@ import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
-  signUp: (name: string, email: string, password: string, role: Role) => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (name: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -16,6 +17,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Define loadUser first (before it's used in checkUser and useEffect)
+  const loadUser = useCallback(async (supabaseUser: any) => {
+    try {
+      // Get user metadata (name and role stored in user_metadata)
+      const metadata = supabaseUser.user_metadata || {};
+      const name = metadata.name || supabaseUser.email?.split('@')[0] || 'User';
+      const role = (metadata.role as Role) || 'BUYER';
+
+      const user: User = {
+        id: supabaseUser.id,
+        name,
+        email: supabaseUser.email || '',
+        role,
+      };
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error loading user:', error);
+      setCurrentUser(null);
+    }
+  }, []);
+
+  // Define checkUser before useEffect uses it
+  const checkUser = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await loadUser(session.user);
+      }
+    } catch (error) {
+      console.error('Error checking session:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadUser]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -34,42 +70,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [checkUser, loadUser]);
 
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await loadUser(session.user);
-      }
-    } catch (error) {
-      console.error('Error checking session:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadUser = async (supabaseUser: any) => {
-    try {
-      // Get user metadata (name and role stored in user_metadata)
-      const metadata = supabaseUser.user_metadata || {};
-      const name = metadata.name || supabaseUser.email?.split('@')[0] || 'User';
-      const role = (metadata.role as Role) || 'BUYER';
-
-      const user: User = {
-        id: supabaseUser.id,
-        name,
-        email: supabaseUser.email || '',
-        role,
-      };
-      setCurrentUser(user);
-    } catch (error) {
-      console.error('Error loading user:', error);
-      setCurrentUser(null);
-    }
-  };
-
-  const signUp = useCallback(async (name: string, email: string, password: string, role: Role) => {
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
       console.log('Attempting sign up with email:', email);
@@ -79,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         options: {
           data: {
             name,
-            role,
+            role: 'BUYER', // Default role for all users, but they have access to both dashboards
           },
         },
       });
@@ -104,7 +107,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadUser]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -124,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadUser]);
 
   const logout = useCallback(async () => {
     setIsLoading(true);
@@ -139,8 +142,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  const updateProfile = useCallback(async (name: string) => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user logged in');
+
+      // Get current metadata
+      const currentMetadata = user.user_metadata || {};
+      
+      // Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          name,
+        },
+      });
+
+      if (updateError) throw updateError;
+
+      // Reload user to get updated data
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        await loadUser(updatedUser);
+      }
+    } catch (error: any) {
+      setIsLoading(false);
+      throw new Error(error.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadUser]);
+
   return (
-    <AuthContext.Provider value={{ currentUser, signUp, signIn, logout, isLoading }}>
+    <AuthContext.Provider value={{ currentUser, signUp, signIn, logout, updateProfile, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
