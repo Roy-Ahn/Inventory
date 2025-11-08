@@ -1,19 +1,35 @@
 
-import React, { useState, useMemo } from 'react';
-import { Page } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getSpaces } from '../services/storageService';
+import { Space, Page } from '../types';
 import SpaceCard from '../components/SpaceCard';
 import Spinner from '../components/Spinner';
-import { useData } from '../contexts/DataContext';
 
 interface SpacesPageProps {
   onNavigate: (page: Page, spaceId: string) => void;
 }
 
 const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
-  const { spaces, isLoading: loading } = useData();
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [maxPrice, setMaxPrice] = useState(2000);
   const [minSize, setMinSize] = useState(0);
+
+  useEffect(() => {
+    const fetchSpaces = async () => {
+      try {
+        setLoading(true);
+        const data = await getSpaces();
+        setSpaces(data);
+      } catch (error) {
+        console.error("Failed to fetch spaces:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSpaces();
+  }, []);
 
   const filteredSpaces = useMemo(() => {
     return spaces.filter(space => {
@@ -79,7 +95,7 @@ const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
         <Spinner />
       ) : (
         <>
-          <p className="text-center text-gray-500 mb-8">{filteredSpaces.length} space{filteredSpaces.length !== 1 ? 's' : ''} found.</p>
+          <p className="text-center text-gray-500 mb-8">{filteredSpaces.length} space{filteredSpaces.length !== 1 && 's'} found.</p>
           {filteredSpaces.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredSpaces.map(space => (

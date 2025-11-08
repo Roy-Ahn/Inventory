@@ -11,14 +11,6 @@ import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
-import ProfilePage from './pages/ProfilePage';
-import CheckoutPage from './pages/CheckoutPage';
-
-interface BookingData {
-  spaceId: string;
-  startDate: string;
-  endDate: string;
-}
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -51,16 +43,8 @@ const App: React.FC = () => {
       if (!currentUser) {
         return <LoginPage onNavigate={navigateTo} />;
       }
-      // All logged-in users can access admin page
-    }
-    if (currentPage === 'profile') {
-      if (!currentUser) {
-        return <LoginPage onNavigate={navigateTo} />;
-      }
-    }
-    if (currentPage === 'checkout') {
-      if (!currentUser) {
-        return <LoginPage onNavigate={navigateTo} />;
+      if (currentUser.role !== 'SELLER') {
+        return <AccessDeniedPage onNavigate={navigateTo} />;
       }
       if (!bookingData) {
         return <SpacesPage onNavigate={navigateTo} />;
@@ -94,8 +78,6 @@ const App: React.FC = () => {
         return <DashboardPage onNavigate={navigateTo} />;
       case 'admin':
         return <AdminPage />;
-      case 'profile':
-        return <ProfilePage onNavigate={navigateTo} />;
       case 'login':
         return <LoginPage onNavigate={navigateTo} />;
       case 'accessDenied':

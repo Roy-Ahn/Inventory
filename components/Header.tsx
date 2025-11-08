@@ -40,19 +40,16 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           {currentUser && (
             <>
               <NavLink onClick={() => onNavigate('dashboard')}>My Dashboard</NavLink>
-              <NavLink onClick={() => onNavigate('admin')}>Admin</NavLink>
+              {currentUser.role === 'SELLER' && (
+                <NavLink onClick={() => onNavigate('admin')}>Admin</NavLink>
+              )}
             </>
           )}
         </div>
         <div className="hidden md:flex items-center space-x-4">
             {currentUser ? (
                  <>
-                    <button 
-                      onClick={() => onNavigate('profile')} 
-                      className="text-gray-600 hover:text-blue-600 transition-colors duration-300 font-medium"
-                    >
-                      Hi, {currentUser.name.split(' ')[0]}
-                    </button>
+                    <span className="text-gray-600">Hi, {currentUser.name.split(' ')[0]}</span>
                     <button onClick={handleLogout} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300">
                         Logout
                     </button>

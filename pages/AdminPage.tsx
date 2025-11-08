@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getSpaces, createSpace, updateSpace, deleteSpace } from '../services/storageService';
 import { Space } from '../types';
 import Spinner from '../components/Spinner';
-import { useData } from '../contexts/DataContext';
 
 const SpaceForm: React.FC<{
   space: Partial<Space> | null;
@@ -58,31 +58,42 @@ const SpaceForm: React.FC<{
 
 
 const AdminPage: React.FC = () => {
-  const { spaces, isLoading: loading, createSpace, updateSpace, deleteSpace } = useData();
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingSpace, setEditingSpace] = useState<Partial<Space> | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
 
-  const handleSave = async (spaceData: Omit<Space, 'id'> | Space) => {
+  const fetchSpaces = useCallback(async () => {
     try {
-      if ('id' in spaceData) {
-        await updateSpace(spaceData);
-      } else {
-        await createSpace(spaceData);
-      }
-      setIsFormVisible(false);
-      setEditingSpace(null);
+      setLoading(true);
+      const data = await getSpaces();
+      setSpaces(data);
     } catch (error) {
-      console.error('Failed to save space:', error);
+      console.error("Failed to fetch spaces:", error);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchSpaces();
+  }, [fetchSpaces]);
+
+  const handleSave = async (spaceData: Omit<Space, 'id'> | Space) => {
+    if ('id' in spaceData) {
+      await updateSpace(spaceData);
+    } else {
+      await createSpace(spaceData);
+    }
+    setIsFormVisible(false);
+    setEditingSpace(null);
+    fetchSpaces();
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this space?')) {
-      try {
-        await deleteSpace(id);
-      } catch (error) {
-        console.error('Failed to delete space:', error);
-      }
+      await deleteSpace(id);
+      fetchSpaces();
     }
   };
 
