@@ -29,4 +29,4 @@ export interface User {
   role: Role;
 }
 
-export type Page = 'home' | 'spaces' | 'spaceDetail' | 'dashboard' | 'admin' | 'login' | 'accessDenied' | 'profile';
+export type Page = 'home' | 'spaces' | 'spaceDetail' | 'dashboard' | 'admin' | 'login' | 'accessDenied' | 'profile' | 'checkout';
