@@ -11,25 +11,15 @@ import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
+import ProfilePage from './pages/ProfilePage';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
-  const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const { currentUser } = useAuth();
 
   const navigateTo = useCallback((page: Page, spaceId: string | null = null) => {
     setCurrentPage(page);
-    setSelectedSpaceId(spaceId);
-    if (page !== 'checkout') {
-      setBookingData(null);
-    }
-    window.scrollTo(0, 0);
-  }, []);
-
-  const navigateToCheckout = useCallback((spaceId: string, startDate: string, endDate: string) => {
-    setBookingData({ spaceId, startDate, endDate });
-    setCurrentPage('checkout');
     setSelectedSpaceId(spaceId);
     window.scrollTo(0, 0);
   }, []);
@@ -43,20 +33,12 @@ const App: React.FC = () => {
       if (!currentUser) {
         return <LoginPage onNavigate={navigateTo} />;
       }
-      if (currentUser.role !== 'SELLER') {
-        return <AccessDeniedPage onNavigate={navigateTo} />;
+      // All logged-in users can access admin page
+    }
+    if (currentPage === 'profile') {
+      if (!currentUser) {
+        return <LoginPage onNavigate={navigateTo} />;
       }
-      if (!bookingData) {
-        return <SpacesPage onNavigate={navigateTo} />;
-      }
-      return (
-        <CheckoutPage
-          spaceId={bookingData.spaceId}
-          startDate={bookingData.startDate}
-          endDate={bookingData.endDate}
-          onNavigate={navigateTo}
-        />
-      );
     }
     
     switch (currentPage) {
@@ -65,15 +47,7 @@ const App: React.FC = () => {
       case 'spaces':
         return <SpacesPage onNavigate={navigateTo} />;
       case 'spaceDetail':
-        return selectedSpaceId ? (
-          <SpaceDetailPage 
-            spaceId={selectedSpaceId} 
-            onNavigate={navigateTo}
-            onNavigateToCheckout={navigateToCheckout}
-          />
-        ) : (
-          <SpacesPage onNavigate={navigateTo} />
-        );
+        return selectedSpaceId ? <SpaceDetailPage spaceId={selectedSpaceId} onNavigate={navigateTo} /> : <SpacesPage onNavigate={navigateTo} />;
       case 'dashboard':
         return <DashboardPage onNavigate={navigateTo} />;
       case 'admin':
