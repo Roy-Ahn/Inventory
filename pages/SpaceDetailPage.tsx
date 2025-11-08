@@ -1,16 +1,17 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSpaceById, createBooking } from '../services/storageService';
-import { Space, Page, Booking } from '../types';
+import { getSpaceById } from '../services/storageService';
+import { Space, Page } from '../types';
 import Spinner from '../components/Spinner';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SpaceDetailPageProps {
   spaceId: string;
   onNavigate: (page: Page, spaceId?: string) => void;
+  onNavigateToCheckout?: (spaceId: string, startDate: string, endDate: string) => void;
 }
 
-const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }) => {
+const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate, onNavigateToCheckout }) => {
   const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,8 +19,7 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [bookingStatus, setBookingStatus] = useState<'idle' | 'booking' | 'success' | 'error'>('idle');
-  const [bookingError, setBookingError] = useState('');
+  const [dateError, setDateError] = useState('');
   
   const { currentUser } = useAuth();
 
@@ -56,28 +56,31 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
     return (months * space.pricePerMonth).toFixed(2);
   }, [startDate, endDate, space]);
 
-  const handleBooking = async (e: React.FormEvent) => {
+  const handleBooking = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!space || !totalPrice || parseFloat(totalPrice) <= 0 || !currentUser) {
-      setBookingError('Please select valid start and end dates.');
+    setDateError('');
+    
+    // Validate dates
+    if (!startDate || !endDate) {
+      setDateError('Please select both start and end dates.');
       return;
     }
-    setBookingStatus('booking');
-    setBookingError('');
-    try {
-      const bookingData: Omit<Booking, 'id' | 'totalPrice'> & {totalPrice: number} = {
-        spaceId: space.id,
-        userId: currentUser.id,
-        startDate,
-        endDate,
-        totalPrice: parseFloat(totalPrice),
-      };
-      await createBooking(bookingData);
-      setBookingStatus('success');
-      setTimeout(() => onNavigate('dashboard'), 2000);
-    } catch {
-      setBookingStatus('error');
-      setBookingError('Failed to create booking. Please try again.');
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (end <= start) {
+      setDateError('End date must be after start date.');
+      return;
+    }
+
+    if (!totalPrice || parseFloat(totalPrice) <= 0) {
+      setDateError('Please select valid dates.');
+      return;
+    }
+
+    // Navigate to checkout (button is only shown when user is logged in and space is available)
+    if (onNavigateToCheckout) {
+      onNavigateToCheckout(space.id, startDate, endDate);
     }
   };
 
@@ -182,11 +185,10 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
                         <p className="text-sm text-gray-500">Estimated Total</p>
                         <p className="text-2xl font-bold text-blue-600">${totalPrice}</p>
                     </div>
-                    {bookingError && <p className="text-red-500 text-sm mb-2 text-center">{bookingError}</p>}
-                    <button type="submit" disabled={bookingStatus === 'booking'} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400">
-                      {bookingStatus === 'booking' ? 'Processing...' : 'Book Now'}
+                    {dateError && <p className="text-red-500 text-sm mb-2 text-center">{dateError}</p>}
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300">
+                      Proceed to Checkout
                     </button>
-                    {bookingStatus === 'success' && <p className="text-green-600 mt-4 text-center font-semibold">Booking successful! Redirecting...</p>}
                   </form>
                 ) : (
                   <div className="text-center p-4 bg-red-100 border border-red-200 rounded-lg">
