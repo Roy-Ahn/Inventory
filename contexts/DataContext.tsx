@@ -147,6 +147,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Create booking
   const createBooking = useCallback(async (bookingData: Omit<Booking, 'id'>) => {
     try {
+      // Check for overlapping bookings
+      const { data: existingBookings, error: checkError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('space_id', bookingData.spaceId)
+        .or(`start_date.lte.${bookingData.endDate},end_date.gte.${bookingData.startDate}`);
+
+      if (checkError) throw checkError;
+
+      if (existingBookings && existingBookings.length > 0) {
+        throw new Error('Space is already booked for these dates');
+      }
+
       const { error: insertError } = await supabase
         .from('bookings')
         .insert({
@@ -155,6 +168,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           start_date: bookingData.startDate,
           end_date: bookingData.endDate,
           total_price: bookingData.totalPrice,
+          payment_intent_id: bookingData.paymentIntentId,
+          payment_status: bookingData.paymentStatus || 'pending',
         });
 
       if (insertError) throw insertError;
@@ -192,11 +207,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Subscribe to real-time changes for spaces (only if table exists)
     let spacesSubscription: any = null;
     let bookingsSubscription: any = null;
-    
+
     try {
       spacesSubscription = supabase
         .channel('spaces-changes')
-        .on('postgres_changes', 
+        .on('postgres_changes',
           { event: '*', schema: 'public', table: 'spaces' },
           () => {
             refreshSpaces().catch(err => console.error('Error refreshing spaces:', err));

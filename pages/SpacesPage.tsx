@@ -12,7 +12,7 @@ interface SpacesPageProps {
 const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
   const { spaces, isLoading: loading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [maxPrice, setMaxPrice] = useState(2000);
+  const [maxPrice, setMaxPrice] = useState(10000);
   const [minSize, setMinSize] = useState(0);
 
   const filteredSpaces = useMemo(() => {
@@ -20,7 +20,7 @@ const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
       const searchTermLower = searchTerm.toLowerCase();
       return (
         (space.name.toLowerCase().includes(searchTermLower) || space.location.toLowerCase().includes(searchTermLower)) &&
-        space.pricePerMonth <= maxPrice &&
+        (maxPrice === 10000 ? true : space.pricePerMonth <= maxPrice) &&
         space.size >= minSize
       );
     });
@@ -47,12 +47,12 @@ const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
             />
           </div>
           <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Max Price: <span className="font-bold text-blue-600">${maxPrice}</span></label>
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Max Price: <span className="font-bold text-blue-600">${maxPrice === 10000 ? '10k+' : maxPrice}</span></label>
             <input
               type="range"
               id="price"
               min="50"
-              max="2000"
+              max="10000"
               step="50"
               value={maxPrice}
               onChange={(e) => setMaxPrice(Number(e.target.value))}

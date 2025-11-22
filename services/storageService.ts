@@ -48,7 +48,7 @@ export const getSpaceById = async (id: string): Promise<Space | undefined> => {
   };
 };
 
-export const getBookingsForUser = async (userId: string): Promise<{booking: Booking, space?: Space}[]> => {
+export const getBookingsForUser = async (userId: string): Promise<{ booking: Booking, space?: Space }[]> => {
   const { data, error } = await supabase
     .from('bookings')
     .select(`
@@ -86,7 +86,20 @@ export const getBookingsForUser = async (userId: string): Promise<{booking: Book
   });
 };
 
-export const createBooking = async (bookingData: Omit<Booking, 'id' | 'totalPrice'> & {totalPrice: number}): Promise<Booking> => {
+export const createBooking = async (bookingData: Omit<Booking, 'id' | 'totalPrice'> & { totalPrice: number }): Promise<Booking> => {
+  // Check for overlapping bookings
+  const { data: existingBookings, error: checkError } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('space_id', bookingData.spaceId)
+    .or(`start_date.lte.${bookingData.endDate},end_date.gte.${bookingData.startDate}`);
+
+  if (checkError) throw checkError;
+
+  if (existingBookings && existingBookings.length > 0) {
+    throw new Error('Space is already booked for these dates');
+  }
+
   const { data, error } = await supabase
     .from('bookings')
     .insert({
@@ -95,6 +108,8 @@ export const createBooking = async (bookingData: Omit<Booking, 'id' | 'totalPric
       start_date: bookingData.startDate,
       end_date: bookingData.endDate,
       total_price: bookingData.totalPrice,
+      payment_intent_id: bookingData.paymentIntentId,
+      payment_status: bookingData.paymentStatus || 'pending',
     })
     .select()
     .single();
@@ -113,6 +128,8 @@ export const createBooking = async (bookingData: Omit<Booking, 'id' | 'totalPric
     startDate: data.start_date,
     endDate: data.end_date,
     totalPrice: parseFloat(data.total_price),
+    paymentIntentId: data.payment_intent_id,
+    paymentStatus: data.payment_status,
   };
 };
 

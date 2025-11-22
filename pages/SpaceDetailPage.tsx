@@ -1,9 +1,20 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSpaceById, createBooking } from '../services/storageService';
+import { getSpaceById } from '../services/storageService';
 import { Space, Page, Booking } from '../types';
 import Spinner from '../components/Spinner';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import CheckoutForm from '../components/CheckoutForm';
+import { supabase } from '../lib/supabase';
+import { ReviewSection } from '../components/ReviewSection';
+
+// Make sure to call loadStripe outside of a component’s render to avoid
+// recreating the Stripe object on every render.
+// This is your test publishable API key.
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 interface SpaceDetailPageProps {
   spaceId: string;
@@ -20,8 +31,10 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
   const [endDate, setEndDate] = useState('');
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'booking' | 'success' | 'error'>('idle');
   const [bookingError, setBookingError] = useState('');
-  
+  const [clientSecret, setClientSecret] = useState("");
+
   const { currentUser } = useAuth();
+  const { createBooking } = useData();
 
   useEffect(() => {
     const fetchSpace = async () => {
@@ -56,29 +69,65 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
     return (months * space.pricePerMonth).toFixed(2);
   }, [startDate, endDate, space]);
 
-  const handleBooking = async (e: React.FormEvent) => {
+  const initiateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!space || !totalPrice || parseFloat(totalPrice) <= 0 || !currentUser) {
       setBookingError('Please select valid start and end dates.');
       return;
     }
+
     setBookingStatus('booking');
     setBookingError('');
+
+    // Create PaymentIntent as soon as the user clicks book
     try {
-      const bookingData: Omit<Booking, 'id' | 'totalPrice'> & {totalPrice: number} = {
+      const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+        body: { amount: Math.round(parseFloat(totalPrice) * 100), currency: 'usd' } // Amount in cents
+      });
+
+      if (error) throw error;
+      setClientSecret(data.clientSecret);
+    } catch (err: any) {
+      console.error("Error creating payment intent:", err);
+      setBookingError('Failed to initialize payment. Please try again.');
+      setBookingStatus('idle');
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
+    if (!space || !currentUser || !totalPrice) return;
+
+    try {
+      const bookingData: Omit<Booking, 'id' | 'totalPrice'> & { totalPrice: number } = {
         spaceId: space.id,
         userId: currentUser.id,
         startDate,
         endDate,
         totalPrice: parseFloat(totalPrice),
+        paymentIntentId: paymentIntentId,
+        paymentStatus: 'succeeded'
       };
       await createBooking(bookingData);
       setBookingStatus('success');
       setTimeout(() => onNavigate('dashboard'), 2000);
-    } catch {
+    } catch (err) {
+      console.error("Error creating booking after payment:", err);
+      setBookingError('Payment successful but booking creation failed. Please contact support.');
       setBookingStatus('error');
-      setBookingError('Failed to create booking. Please try again.');
     }
+  };
+
+  const handlePaymentError = (errorMessage: string) => {
+    setBookingError(errorMessage);
+    setBookingStatus('idle'); // Allow retry
+  };
+
+  const appearance = {
+    theme: 'stripe' as const,
+  };
+  const options = {
+    clientSecret,
+    appearance,
   };
 
   if (loading) return <div className="py-20"><Spinner /></div>;
@@ -112,7 +161,7 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Description</h2>
             <p className="text-gray-600 leading-relaxed">{space.description}</p>
           </div>
-          
+
           <div className="mt-8 bg-white p-8 rounded-2xl shadow-lg">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Location</h2>
             <div className="w-full h-80 rounded-lg overflow-hidden border border-gray-200">
@@ -127,6 +176,10 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
                 referrerPolicy="no-referrer-when-downgrade"
               ></iframe>
             </div>
+          </div>
+
+          <div className="mt-8 bg-white p-8 rounded-2xl shadow-lg">
+            <ReviewSection spaceId={space.id} />
           </div>
         </div>
 
@@ -150,44 +203,52 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
                 <ul className="space-y-2">
                   {space.features.map((feature, i) => (
                     <li key={i} className="flex items-center text-gray-600">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                       {feature}
                     </li>
                   ))}
                 </ul>
               </div>
-              
+
               <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
                 <h2 className="text-xl font-bold text-center mb-4 text-gray-800">Book This Space</h2>
                 {!currentUser ? (
-                    <div className="text-center">
-                        <p className="text-gray-600 mb-4">You must be logged in to book a space.</p>
-                        <button onClick={() => onNavigate('login')} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
-                            Login to Book
-                        </button>
-                    </div>
-                ) : space.isAvailable ? (
-                  <form onSubmit={handleBooking}>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">Start Date</label>
-                        <input type="date" id="start-date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"/>
-                      </div>
-                      <div>
-                        <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">End Date</label>
-                        <input type="date" id="end-date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"/>
-                      </div>
-                    </div>
-                     <div className="text-center bg-white p-3 rounded-lg mb-4">
-                        <p className="text-sm text-gray-500">Estimated Total</p>
-                        <p className="text-2xl font-bold text-blue-600">${totalPrice}</p>
-                    </div>
-                    {bookingError && <p className="text-red-500 text-sm mb-2 text-center">{bookingError}</p>}
-                    <button type="submit" disabled={bookingStatus === 'booking'} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400">
-                      {bookingStatus === 'booking' ? 'Processing...' : 'Book Now'}
+                  <div className="text-center">
+                    <p className="text-gray-600 mb-4">You must be logged in to book a space.</p>
+                    <button onClick={() => onNavigate('login')} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
+                      Login to Book
                     </button>
+                  </div>
+                ) : space.isAvailable ? (
+                  <>
+                    {!clientSecret ? (
+                      <form onSubmit={initiateBooking}>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">Start Date</label>
+                            <input type="date" id="start-date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                          </div>
+                          <div>
+                            <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">End Date</label>
+                            <input type="date" id="end-date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                          </div>
+                        </div>
+                        <div className="text-center bg-white p-3 rounded-lg mb-4">
+                          <p className="text-sm text-gray-500">Estimated Total</p>
+                          <p className="text-2xl font-bold text-blue-600">${totalPrice}</p>
+                        </div>
+                        {bookingError && <p className="text-red-500 text-sm mb-2 text-center">{bookingError}</p>}
+                        <button type="submit" disabled={bookingStatus === 'booking'} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400">
+                          {bookingStatus === 'booking' ? 'Processing...' : 'Book Now'}
+                        </button>
+                      </form>
+                    ) : (
+                      <Elements options={options} stripe={stripePromise}>
+                        <CheckoutForm amount={parseFloat(totalPrice)} onSuccess={handlePaymentSuccess} onError={handlePaymentError} />
+                      </Elements>
+                    )}
                     {bookingStatus === 'success' && <p className="text-green-600 mt-4 text-center font-semibold">Booking successful! Redirecting...</p>}
-                  </form>
+                  </>
                 ) : (
                   <div className="text-center p-4 bg-red-100 border border-red-200 rounded-lg">
                     <p className="font-bold text-red-700">This space is currently unavailable.</p>

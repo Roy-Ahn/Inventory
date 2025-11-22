@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Space } from '../types';
 import Spinner from '../components/Spinner';
 import { useData } from '../contexts/DataContext';
+import GooglePlacesAutocomplete from 'react-google-places-autocomplete';
+import { supabase } from '../lib/supabase';
 
 const SpaceForm: React.FC<{
   space: Partial<Space> | null;
@@ -10,17 +12,67 @@ const SpaceForm: React.FC<{
 }> = ({ space, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Partial<Space>>(
     space || {
-      name: '', location: '', size: 0, pricePerMonth: 0, description: '', images: [''], features: [''], isAvailable: true,
+      name: '', location: '', size: 0, pricePerMonth: 0, description: '', images: [], features: [], isAvailable: true,
     }
   );
+  const [uploading, setUploading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'number' ? parseFloat(value) || 0 : value }));
   };
-  
-  const handleArrayChange = (field: 'images' | 'features', value: string) => {
+
+  const handleArrayChange = (field: 'features', value: string) => {
     setFormData(prev => ({ ...prev, [field]: value.split(',').map(item => item.trim()) }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    setUploading(true);
+    const files = Array.from(e.target.files);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('space-images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data } = supabase.storage
+          .from('space-images')
+          .getPublicUrl(filePath);
+
+        if (data) {
+          uploadedUrls.push(data.publicUrl);
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        images: [...(prev.images || []), ...uploadedUrls]
+      }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error uploading image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images?.filter((_, index) => index !== indexToRemove)
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,27 +87,63 @@ const SpaceForm: React.FC<{
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input name="name" value={formData.name || ''} onChange={handleChange} placeholder="Name" required className="p-2 border rounded-md" />
-            <input name="location" value={formData.location || ''} onChange={handleChange} placeholder="Location" required className="p-2 border rounded-md" />
+            <div className="google-places-autocomplete">
+              <GooglePlacesAutocomplete
+                apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+                selectProps={{
+                  value: formData.location ? { label: formData.location, value: formData.location } : null,
+                  onChange: (val: any) => setFormData(prev => ({ ...prev, location: val?.label || '' })),
+                  placeholder: 'Location',
+                  className: 'z-50'
+                }}
+              />
+            </div>
             <input name="size" value={formData.size || ''} onChange={handleChange} type="number" placeholder="Size (sq ft)" required className="p-2 border rounded-md" />
             <input name="pricePerMonth" value={formData.pricePerMonth || ''} onChange={handleChange} type="number" placeholder="Price per Month" required className="p-2 border rounded-md" />
           </div>
           <textarea name="description" value={formData.description || ''} onChange={handleChange} placeholder="Description" required className="w-full p-2 border rounded-md h-24" />
-          <input name="images" value={formData.images?.join(', ') || ''} onChange={(e) => handleArrayChange('images', e.target.value)} placeholder="Image URLs (comma separated)" required className="w-full p-2 border rounded-md" />
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Images</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {formData.images?.map((url, index) => (
+                <div key={index} className="relative w-20 h-20">
+                  <img src={url} alt={`Space ${index}`} className="w-full h-full object-cover rounded-md" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 w-6 h-6 flex items-center justify-center text-xs"
+                  >
+                    X
+                  </button>
+                </div>
+              ))}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              disabled={uploading}
+              className="w-full p-2 border rounded-md"
+            />
+            {uploading && <p className="text-sm text-blue-600">Uploading...</p>}
+          </div>
+
           <input name="features" value={formData.features?.join(', ') || ''} onChange={(e) => handleArrayChange('features', e.target.value)} placeholder="Features (comma separated)" required className="w-full p-2 border rounded-md" />
-           <div className="flex items-center">
-            <input type="checkbox" id="isAvailable" name="isAvailable" checked={formData.isAvailable} onChange={e => setFormData(prev => ({...prev, isAvailable: e.target.checked}))} className="h-4 w-4 text-blue-600 border-gray-300 rounded"/>
+          <div className="flex items-center">
+            <input type="checkbox" id="isAvailable" name="isAvailable" checked={formData.isAvailable} onChange={e => setFormData(prev => ({ ...prev, isAvailable: e.target.checked }))} className="h-4 w-4 text-blue-600 border-gray-300 rounded" />
             <label htmlFor="isAvailable" className="ml-2 block text-sm text-gray-900">Is Available</label>
-           </div>
+          </div>
           <div className="flex justify-end space-x-4 pt-4">
             <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+            <button type="submit" disabled={uploading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400">Save</button>
           </div>
         </form>
       </div>
     </div>
   );
 };
-
 
 const AdminPage: React.FC = () => {
   const { spaces, isLoading: loading, createSpace, updateSpace, deleteSpace } = useData();
@@ -90,7 +178,7 @@ const AdminPage: React.FC = () => {
     setEditingSpace({});
     setIsFormVisible(true);
   };
-  
+
   const handleEdit = (space: Space) => {
     setEditingSpace(space);
     setIsFormVisible(true);
@@ -104,8 +192,8 @@ const AdminPage: React.FC = () => {
           + Add New Space
         </button>
       </div>
-      
-      {isFormVisible && <SpaceForm space={editingSpace} onSave={handleSave} onCancel={() => {setIsFormVisible(false); setEditingSpace(null);}} />}
+
+      {isFormVisible && <SpaceForm space={editingSpace} onSave={handleSave} onCancel={() => { setIsFormVisible(false); setEditingSpace(null); }} />}
 
       {loading ? <Spinner /> : (
         <div className="bg-white shadow-xl rounded-2xl overflow-hidden">

@@ -20,6 +20,18 @@ export interface Booking {
   startDate: string;
   endDate: string;
   totalPrice: number;
+  paymentIntentId?: string;
+  paymentStatus?: 'pending' | 'succeeded' | 'failed';
+}
+
+export interface Review {
+  id: string;
+  spaceId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  user?: User;
 }
 
 export interface User {
