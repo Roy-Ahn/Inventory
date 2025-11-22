@@ -9,6 +9,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
+  // TEMPORARY GUEST ACCOUNT FEATURE - REMOVE WHEN NO LONGER NEEDED
+  createGuestAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -139,8 +141,52 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  // TEMPORARY GUEST ACCOUNT FEATURE - REMOVE WHEN NO LONGER NEEDED
+  // Creates a temporary guest account that allows booking without email/password registration
+  const createGuestAccount = useCallback(async () => {
+    // If user is already logged in, don't create a new guest account
+    if (currentUser) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Generate a unique guest email using timestamp and random number
+      const guestEmail = `guest_${Date.now()}_${Math.random().toString(36).substring(7)}@temp.storeaway.com`;
+      const guestPassword = `guest_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      
+      // Create a temporary account in Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email: guestEmail,
+        password: guestPassword,
+        options: {
+          data: {
+            name: 'Guest User',
+            role: 'BUYER',
+            isGuest: true, // Mark as guest account
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Guest account creation error:', error);
+        throw error;
+      }
+
+      if (data.user) {
+        await loadUser(data.user);
+      }
+    } catch (error: any) {
+      console.error('Failed to create guest account:', error);
+      setIsLoading(false);
+      throw new Error(error.message || 'Failed to create guest account');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser]);
+
   return (
-    <AuthContext.Provider value={{ currentUser, signUp, signIn, logout, isLoading }}>
+    <AuthContext.Provider value={{ currentUser, signUp, signIn, logout, isLoading, createGuestAccount }}>
       {children}
     </AuthContext.Provider>
   );

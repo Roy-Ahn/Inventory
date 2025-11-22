@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 
 interface StripeCheckoutFormProps {
   spaceId: string;
@@ -43,32 +44,55 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
     try {
       // Create payment method from card details
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error('Card element not found');
+      }
       const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
-        card: elements.getElement(CardElement)!,
+        card: cardElement as any,
       });
 
       if (pmError) {
         throw new Error(pmError.message);
       }
 
-      // TODO: Update this URL to your actual backend endpoint
-      // For Supabase: 'https://YOUR-PROJECT.supabase.co/functions/v1/create-booking'
-      // For Express: '/api/create-booking' or 'http://localhost:3001/api/create-booking'
-      const response = await fetch('/api/create-booking', {
+      // Get Supabase session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Use Supabase Edge Function endpoint
+      const endpoint = SUPABASE_URL && SUPABASE_URL !== 'https://placeholder.supabase.co'
+        ? `${SUPABASE_URL}/functions/v1/create-booking`
+        : '/api/create-booking'; // Fallback if Supabase not configured
+
+      // Prepare headers
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add Supabase authentication headers if available
+      if (SUPABASE_URL && SUPABASE_URL !== 'https://placeholder.supabase.co') {
+        // Supabase Edge Functions ALWAYS need the apikey header (anon key)
+        if (SUPABASE_ANON_KEY) {
+          headers['apikey'] = SUPABASE_ANON_KEY;
+        }
+        // Add user's auth token if logged in (optional)
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // TODO: If using Supabase, add authorization header:
-          // 'Authorization': `Bearer ${YOUR_SUPABASE_ANON_KEY}`,
-        },
+        headers,
         body: JSON.stringify({
           paymentMethodId: paymentMethod.id,
-          amount: totalPrice,
+          amount: Math.round(totalPrice * 100), // Convert to cents for Stripe
           spaceId: spaceId,
-          userId: currentUser.id,
+          userId: currentUser?.id || null,
           startDate: startDate,
           endDate: endDate,
+          currency: 'usd',
         }),
       });
 
@@ -92,6 +116,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
   // Stripe CardElement styling options
   const cardElementOptions = {
+    hidePostalCode: false, // Explicitly show postal code field
     style: {
       base: {
         fontSize: '16px',

@@ -1,6 +1,10 @@
 
 import { Space, Booking, User } from './types';
 
+// Stripe Configuration
+// Get your publishable key from: https://dashboard.stripe.com/test/apikeys
+export const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
+
 export const MOCK_USERS: User[] = [
   {
     id: 'user-1',
