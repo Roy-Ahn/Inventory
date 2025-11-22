@@ -1,6 +1,0 @@
-# Supabase Functions Configuration
-# JWT verification is enabled - users must be logged in to book
-
-[functions.create-booking]
-verify_jwt = true
-
