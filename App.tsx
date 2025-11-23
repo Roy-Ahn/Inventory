@@ -11,7 +11,6 @@ import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
-import ProfilePage from './pages/ProfilePage';
 import CheckoutPage from './pages/CheckoutPage';
 
 interface BookingData {

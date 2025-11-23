@@ -23,3 +23,9 @@ export const supabase = supabaseUrl && supabaseAnonKey
     })
   : createClient('https://placeholder.supabase.co', 'placeholder-key');
 
+// Export the Supabase URL for use in other components
+export const SUPABASE_URL = supabaseUrl || '';
+
+// Export the anon key for use in Edge Function requests
+export const SUPABASE_ANON_KEY = supabaseAnonKey || '';
+
