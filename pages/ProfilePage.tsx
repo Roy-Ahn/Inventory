@@ -9,11 +9,12 @@ interface ProfilePageProps {
 }
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
-  const { currentUser, updateProfile, isLoading: authLoading } = useAuth();
+  const { currentUser, updateProfile, updateRole, isLoading: authLoading } = useAuth();
   const { bookings = [] } = useData();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(currentUser?.name || '');
+  const [isHostAccount, setIsHostAccount] = useState(currentUser?.role === 'HOST');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -22,6 +23,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
   useEffect(() => {
     if (currentUser) {
       setName(currentUser.name);
+      setIsHostAccount(currentUser.role === 'HOST');
     }
   }, [currentUser]);
 
@@ -47,6 +49,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     try {
       setIsSaving(true);
       await updateProfile(name.trim());
+
+      if (isHostAccount && currentUser.role !== 'HOST') {
+        await updateRole('HOST');
+      } else if (!isHostAccount && currentUser.role === 'HOST') {
+        await updateRole('CLIENT');
+      }
+
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
     } catch (err: any) {
@@ -56,8 +65,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     }
   };
 
+
+
   const handleCancel = () => {
     setName(currentUser?.name || '');
+    setIsHostAccount(currentUser?.role === 'HOST');
     setError('');
     setSuccess('');
     setIsEditing(false);
@@ -67,8 +79,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     return (
       <div className="text-center py-20">
         <p className="text-gray-600 mb-4">Please log in to view your profile.</p>
-        <button 
-          onClick={() => onNavigate('login')} 
+        <button
+          onClick={() => onNavigate('login')}
           className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300"
         >
           Login
@@ -139,6 +151,25 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
                   <p className="mt-1 text-sm text-gray-500">Email cannot be changed</p>
                 </div>
 
+                <div className={`p-4 rounded-lg border ${isHostAccount ? 'bg-purple-50 border-purple-100' : 'bg-gray-50 border-gray-200'}`}>
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isHostAccount}
+                      onChange={(e) => setIsHostAccount(e.target.checked)}
+                      className={`h-5 w-5 rounded focus:ring-offset-0 border-gray-300 ${isHostAccount ? 'text-purple-600 focus:ring-purple-500' : 'text-gray-400 focus:ring-gray-400'}`}
+                    />
+                    <div>
+                      <span className={`block font-medium ${isHostAccount ? 'text-purple-900' : 'text-gray-700'}`}>
+                        {isHostAccount ? 'Host Account Enabled' : 'Enable Host Account'}
+                      </span>
+                      <span className={`block text-sm ${isHostAccount ? 'text-purple-700' : 'text-gray-500'}`}>
+                        {isHostAccount ? 'You can list storage spaces' : 'Check this to list storage spaces'}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     {error}
@@ -190,6 +221,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
                     User ID
                   </label>
                   <p className="text-sm text-gray-500 font-mono">{currentUser.id}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Account Type
+                  </label>
+                  <div className="flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${currentUser.role === 'HOST' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {currentUser.role === 'HOST' ? 'Host' : 'Client'}
+                    </span>
+
+                  </div>
                 </div>
 
                 {success && (

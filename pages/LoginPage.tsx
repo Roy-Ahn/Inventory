@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Page } from '../types';
+import { Page, Role } from '../types';
 
 interface LoginPageProps {
-    onNavigate: (page: Page) => void;
+  onNavigate: (page: Page) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
@@ -12,6 +12,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<Role>('CLIENT');
   const [error, setError] = useState('');
   const { signUp, signIn, isLoading } = useAuth();
 
@@ -29,7 +30,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
         return;
       }
       try {
-        await signUp(name, email, password);
+        await signUp(name, email, password, role);
         onNavigate('dashboard');
       } catch (err: any) {
         setError(err.message || 'Failed to sign up. Please try again.');
@@ -100,6 +101,43 @@ const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               placeholder="Enter your password"
             />
           </div>
+          {isSignUp && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                I want to...
+              </label>
+              <div className="flex space-x-4">
+                <label className={`flex-1 cursor-pointer p-3 rounded-lg border-2 transition-all ${role === 'CLIENT' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="CLIENT"
+                    checked={role === 'CLIENT'}
+                    onChange={() => setRole('CLIENT')}
+                    className="sr-only"
+                  />
+                  <div className="text-center">
+                    <span className="block font-semibold text-gray-900">Book Space</span>
+                    <span className="text-xs text-gray-500">Find storage</span>
+                  </div>
+                </label>
+                <label className={`flex-1 cursor-pointer p-3 rounded-lg border-2 transition-all ${role === 'HOST' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="HOST"
+                    checked={role === 'HOST'}
+                    onChange={() => setRole('HOST')}
+                    className="sr-only"
+                  />
+                  <div className="text-center">
+                    <span className="block font-semibold text-gray-900">Host Space</span>
+                    <span className="text-xs text-gray-500">List storage</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
           {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
           <button
             type="submit"

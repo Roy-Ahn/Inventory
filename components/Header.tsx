@@ -40,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           {currentUser && (
             <>
               <NavLink onClick={() => onNavigate('dashboard')}>My Dashboard</NavLink>
-              <NavLink onClick={() => onNavigate('admin')}>Admin</NavLink>
+              {currentUser.role === 'HOST' && <NavLink onClick={() => onNavigate('admin')}>Inventory</NavLink>}
             </>
           )}
         </div>

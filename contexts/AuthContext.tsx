@@ -5,10 +5,11 @@ import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, role: Role) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (name: string) => Promise<void>;
+  updateRole: (role: Role) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -24,13 +25,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Get user metadata (name and role stored in user_metadata)
       const metadata = supabaseUser.user_metadata || {};
       const name = metadata.name || supabaseUser.email?.split('@')[0] || 'User';
-      const role = (metadata.role as Role) || 'BUYER';
+      let role = (metadata.role as string) || 'CLIENT';
+      // Handle legacy roles
+      if (role === 'BUYER') role = 'CLIENT';
+      if (role === 'SELLER') role = 'HOST';
 
       const user: User = {
         id: supabaseUser.id,
         name,
         email: supabaseUser.email || '',
-        role,
+        role: role as Role,
       };
       setCurrentUser(user);
     } catch (error) {
@@ -56,7 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check for existing session on mount
   useEffect(() => {
     checkUser();
-    
+
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
@@ -72,7 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [checkUser, loadUser]);
 
-  const signUp = useCallback(async (name: string, email: string, password: string) => {
+  const signUp = useCallback(async (name: string, email: string, password: string, role: Role) => {
     setIsLoading(true);
     try {
       console.log('Attempting sign up with email:', email);
@@ -82,7 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         options: {
           data: {
             name,
-            role: 'BUYER', // Default role for all users, but they have access to both dashboards
+            role: role,
           },
         },
       });
@@ -91,7 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Supabase sign up error:', error);
         throw error;
       }
-      
+
       console.log('Sign up successful, user data:', data);
       if (data.user) {
         await loadUser(data.user);
@@ -150,7 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Get current metadata
       const currentMetadata = user.user_metadata || {};
-      
+
       // Update user metadata
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
@@ -174,8 +178,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [loadUser]);
 
+  const updateRole = useCallback(async (role: Role) => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user logged in');
+
+      const currentMetadata = user.user_metadata || {};
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          role,
+        },
+      });
+
+      if (updateError) throw updateError;
+
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        await loadUser(updatedUser);
+      }
+    } catch (error: any) {
+      setIsLoading(false);
+      throw new Error(error.message || 'Failed to update role');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadUser]);
+
   return (
-    <AuthContext.Provider value={{ currentUser, signUp, signIn, logout, updateProfile, isLoading }}>
+    <AuthContext.Provider value={{ currentUser, signUp, signIn, logout, updateProfile, updateRole, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

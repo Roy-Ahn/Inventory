@@ -12,7 +12,7 @@ const SpaceForm: React.FC<{
 }> = ({ space, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Partial<Space>>(
     space || {
-      name: '', location: '', size: 0, pricePerMonth: 0, description: '', images: [], features: [], isAvailable: true,
+      name: '', location: '', size: 0, pricePerMonth: 0, description: '', images: [], features: [], isAvailable: true, hostId: '',
     }
   );
   const [uploading, setUploading] = useState(false);
@@ -145,8 +145,11 @@ const SpaceForm: React.FC<{
   );
 };
 
+import { useAuth } from '../contexts/AuthContext';
+
 const AdminPage: React.FC = () => {
   const { spaces, isLoading: loading, createSpace, updateSpace, deleteSpace } = useData();
+  const { currentUser } = useAuth();
   const [editingSpace, setEditingSpace] = useState<Partial<Space> | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
 
@@ -155,7 +158,8 @@ const AdminPage: React.FC = () => {
       if ('id' in spaceData) {
         await updateSpace(spaceData);
       } else {
-        await createSpace(spaceData);
+        if (!currentUser) return;
+        await createSpace({ ...spaceData, hostId: currentUser.id });
       }
       setIsFormVisible(false);
       setEditingSpace(null);
@@ -209,7 +213,7 @@ const AdminPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {spaces.map(space => (
+                {spaces.filter(space => space.hostId === currentUser?.id).map(space => (
                   <tr key={space.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap"><div className="font-medium text-gray-900">{space.name}</div><div className="text-sm text-gray-500">{space.size} sq ft</div></td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{space.location}</td>

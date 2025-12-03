@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
 );
 
+-- Ensure spaces table has host_id
+ALTER TABLE public.spaces ADD COLUMN IF NOT EXISTS host_id UUID REFERENCES auth.users(id);
+
 -- Add foreign key constraints if they don't exist
 -- This assumes you have a 'spaces' table and an 'auth.users' table or 'users' table
 DO $$ 

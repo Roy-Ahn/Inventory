@@ -33,14 +33,16 @@ const App: React.FC = () => {
       if (!currentUser) {
         return <LoginPage onNavigate={navigateTo} />;
       }
-      // All logged-in users can access admin page
+      if (currentUser.role !== 'HOST') {
+        return <AccessDeniedPage onNavigate={navigateTo} />;
+      }
     }
     if (currentPage === 'profile') {
       if (!currentUser) {
         return <LoginPage onNavigate={navigateTo} />;
       }
     }
-    
+
     switch (currentPage) {
       case 'home':
         return <HomePage onNavigate={navigateTo} />;

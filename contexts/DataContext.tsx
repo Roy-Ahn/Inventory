@@ -44,6 +44,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         images: space.images || [],
         features: space.features || [],
         isAvailable: space.is_available,
+        hostId: space.host_id,
       }));
       setSpaces(transformedSpaces);
     } catch (err: any) {
@@ -92,6 +93,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           images: spaceData.images,
           features: spaceData.features,
           is_available: spaceData.isAvailable,
+          host_id: spaceData.hostId,
         });
 
       if (insertError) throw insertError;

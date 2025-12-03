@@ -1,5 +1,5 @@
 
-export type Role = 'BUYER' | 'SELLER';
+export type Role = 'CLIENT' | 'HOST';
 
 export interface Space {
   id: string;
@@ -11,6 +11,7 @@ export interface Space {
   images: string[];
   features: string[];
   isAvailable: boolean;
+  hostId: string;
 }
 
 export interface Booking {
