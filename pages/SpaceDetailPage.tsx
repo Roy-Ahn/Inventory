@@ -18,10 +18,10 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 
 
 interface SpaceDetailPageProps {
   spaceId: string;
-  onNavigate: (page: Page, spaceId?: string) => void;
+  onNavigate: (page: Page, id?: string) => void;
 }
 
-const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }) => {
+const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ onNavigate, spaceId }) => {
   const [space, setSpace] = useState<Space | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +32,10 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
   const [bookingStatus, setBookingStatus] = useState<'idle' | 'booking' | 'success' | 'error'>('idle');
   const [bookingError, setBookingError] = useState('');
   const [clientSecret, setClientSecret] = useState("");
+  const [hostName, setHostName] = useState<string>('');
 
   const { currentUser } = useAuth();
-  const { createBooking } = useData();
+  const { spaces, createBooking, getProfile } = useData();
 
   useEffect(() => {
     const fetchSpace = async () => {
@@ -130,9 +131,22 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
     appearance,
   };
 
+  useEffect(() => {
+    console.log('SpaceDetailPage: space changed', space);
+    if (space?.hostId) {
+      console.log('SpaceDetailPage: fetching profile for hostId', space.hostId);
+      getProfile(space.hostId).then(profile => {
+        console.log('SpaceDetailPage: fetched profile', profile);
+        if (profile) setHostName(profile.name);
+      });
+    } else {
+      console.log('SpaceDetailPage: no hostId on space');
+    }
+  }, [space, getProfile]);
+
   if (loading) return <div className="py-20"><Spinner /></div>;
   if (error) return <div className="text-center py-20 text-red-500">{error}</div>;
-  if (!space) return null;
+  if (!space) return <div>Space not found</div>;
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -186,8 +200,22 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
         <div className="lg:col-span-2">
           <div className="sticky top-28">
             <div className="bg-white p-8 rounded-2xl shadow-lg">
-              <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{space.name}</h1>
-              <p className="text-gray-500 mb-4">{space.location}</p>
+              <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{space.name}</h1>
+              <div className="flex items-center text-gray-600 mb-4">
+                <span className="mr-2">📍</span>
+                {space.location}
+              </div>
+              {hostName && (
+                <div className="mb-6">
+                  <span className="text-gray-500">Hosted by </span>
+                  <button
+                    onClick={() => onNavigate('hostProfile', space.hostId)}
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    {hostName}
+                  </button>
+                </div>
+              )}
               <div className="flex justify-between items-center border-t border-b border-gray-200 py-4 my-4">
                 <div>
                   <p className="text-sm text-gray-500">Size</p>

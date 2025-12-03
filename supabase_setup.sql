@@ -11,6 +11,58 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
 );
 
+-- Delete legacy spaces that don't have a host_id
+DELETE FROM public.spaces WHERE host_id IS NULL;
+
+-- Create a table for public profiles
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  name TEXT,
+  role TEXT DEFAULT 'CLIENT',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
+);
+
+-- Enable RLS on profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access to profiles
+CREATE POLICY "Public profiles are viewable by everyone"
+ON public.profiles FOR SELECT
+USING (true);
+
+-- Allow users to insert their own profile
+CREATE POLICY "Users can insert their own profile"
+ON public.profiles FOR INSERT
+WITH CHECK (auth.uid() = id);
+
+-- Allow users to update their own profile
+CREATE POLICY "Users can update own profile"
+ON public.profiles FOR UPDATE
+USING (auth.uid() = id);
+
+-- Function to handle new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, role)
+  VALUES (new.id, new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'role');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to call the function on new user creation
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Backfill existing users into profiles (Run this manually if needed, or include here)
+-- Note: This might fail if run multiple times due to PK constraint, so we use ON CONFLICT DO NOTHING
+INSERT INTO public.profiles (id, name, role)
+SELECT id, raw_user_meta_data->>'name', raw_user_meta_data->>'role'
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 -- Ensure spaces table has host_id
 ALTER TABLE public.spaces ADD COLUMN IF NOT EXISTS host_id UUID REFERENCES auth.users(id);
 

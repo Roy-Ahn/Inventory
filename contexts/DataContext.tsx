@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Space, Booking } from '../types';
+import { Space, Booking, Profile, Review } from '../types';
 import { supabase } from '../lib/supabase';
 
 interface DataContextType {
@@ -13,6 +13,8 @@ interface DataContextType {
   updateSpace: (space: Space) => Promise<void>;
   deleteSpace: (id: string) => Promise<void>;
   createBooking: (booking: Omit<Booking, 'id'>) => Promise<void>;
+  getProfile: (userId: string) => Promise<Profile | null>;
+  getHostReviews: (hostId: string) => Promise<Review[]>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -258,6 +260,64 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateSpace,
         deleteSpace,
         createBooking,
+        getProfile: async (userId: string) => {
+          try {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userId)
+              .single();
+
+            if (error) throw error;
+
+            return {
+              id: data.id,
+              name: data.name,
+              role: data.role,
+              createdAt: data.created_at,
+            };
+          } catch (err) {
+            console.error('Error fetching profile:', err);
+            return null;
+          }
+        },
+        getHostReviews: async (hostId: string) => {
+          try {
+            // First get all spaces owned by this host
+            const { data: spacesData, error: spacesError } = await supabase
+              .from('spaces')
+              .select('id')
+              .eq('host_id', hostId);
+
+            if (spacesError) throw spacesError;
+
+            const spaceIds = spacesData.map(s => s.id);
+
+            if (spaceIds.length === 0) return [];
+
+            // Then get reviews for these spaces
+            const { data: reviewsData, error: reviewsError } = await supabase
+              .from('reviews')
+              .select('*, user:profiles(name)') // Join with profiles to get reviewer name
+              .in('space_id', spaceIds)
+              .order('created_at', { ascending: false });
+
+            if (reviewsError) throw reviewsError;
+
+            return reviewsData.map(r => ({
+              id: r.id,
+              spaceId: r.space_id,
+              userId: r.user_id,
+              rating: r.rating,
+              comment: r.comment,
+              createdAt: r.created_at,
+              user: { name: r.user?.name || 'Unknown User' } as any // Simplified user object
+            }));
+          } catch (err) {
+            console.error('Error fetching host reviews:', err);
+            return [];
+          }
+        },
       }}
     >
       {children}

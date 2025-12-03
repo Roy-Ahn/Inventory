@@ -12,17 +12,28 @@ import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
 import ProfilePage from './pages/ProfilePage';
+import HostProfilePage from './pages/HostProfilePage';
 
-const App: React.FC = () => {
+function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
   const { currentUser } = useAuth();
 
-  const navigateTo = useCallback((page: Page, spaceId: string | null = null) => {
+  const navigateTo = (page: Page, id?: string) => {
+    if (page === 'spaceDetail' && id) {
+      setSelectedSpaceId(id);
+    } else {
+      setSelectedSpaceId(null); // Clear spaceId if not navigating to spaceDetail
+    }
+    if (page === 'hostProfile' && id) {
+      setSelectedHostId(id);
+    } else {
+      setSelectedHostId(null); // Clear hostId if not navigating to hostProfile
+    }
     setCurrentPage(page);
-    setSelectedSpaceId(spaceId);
     window.scrollTo(0, 0);
-  }, []);
+  };
 
   const renderPage = () => {
     // Protected routes
@@ -42,6 +53,11 @@ const App: React.FC = () => {
         return <LoginPage onNavigate={navigateTo} />;
       }
     }
+    if (currentPage === 'hostProfile' && !selectedHostId) {
+      // If hostProfile is requested but no hostId is set, redirect to spaces or home
+      return <SpacesPage onNavigate={navigateTo} />;
+    }
+
 
     switch (currentPage) {
       case 'home':
@@ -56,6 +72,8 @@ const App: React.FC = () => {
         return <AdminPage />;
       case 'profile':
         return <ProfilePage onNavigate={navigateTo} />;
+      case 'hostProfile':
+        return selectedHostId ? <HostProfilePage hostId={selectedHostId} onNavigate={navigateTo} /> : <SpacesPage onNavigate={navigateTo} />;
       case 'login':
         return <LoginPage onNavigate={navigateTo} />;
       case 'accessDenied':

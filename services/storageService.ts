@@ -23,6 +23,7 @@ export const getSpaces = async (): Promise<Space[]> => {
     images: space.images || [],
     features: space.features || [],
     isAvailable: space.is_available,
+    hostId: space.host_id,
   }));
 };
 
@@ -45,6 +46,7 @@ export const getSpaceById = async (id: string): Promise<Space | undefined> => {
     images: data.images || [],
     features: data.features || [],
     isAvailable: data.is_available,
+    hostId: data.host_id,
   };
 };
 
@@ -80,6 +82,7 @@ export const getBookingsForUser = async (userId: string): Promise<{ booking: Boo
       images: item.spaces.images || [],
       features: item.spaces.features || [],
       isAvailable: item.spaces.is_available,
+      hostId: item.spaces.host_id,
     } : undefined;
 
     return { booking, space };

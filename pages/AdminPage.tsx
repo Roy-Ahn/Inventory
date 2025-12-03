@@ -191,7 +191,7 @@ const AdminPage: React.FC = () => {
   return (
     <div className="container mx-auto px-6 py-12">
       <div className="flex justify-between items-center mb-10">
-        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Inventory</h1>
+        <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">My Spaces</h1>
         <button onClick={handleAddNew} className="bg-blue-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors duration-300">
           + Add New Space
         </button>
