@@ -1,19 +1,16 @@
+'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Page } from '../types';
-import SpaceCard from '../components/SpaceCard';
-import Spinner from '../components/Spinner';
-import { useData } from '../contexts/DataContext';
+import SpaceCard from '@/components/SpaceCard';
+import Spinner from '@/components/Spinner';
+import { useData } from '@/contexts/DataContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 
-interface SpacesPageProps {
-  onNavigate: (page: Page, spaceId: string) => void;
-}
-
-const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
+export default function SpacesPage() {
   const { spaces, isLoading: loading } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [maxPrice, setMaxPrice] = useState([10000]);
@@ -32,12 +29,22 @@ const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
 
   return (
     <div className="container mx-auto px-6 py-12">
-      <div className="text-center mb-12">
+      <motion.div
+        className="text-center mb-12"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Find the Perfect Space</h1>
         <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Use the filters to narrow down your search for the ideal storage unit.</p>
-      </div>
+      </motion.div>
 
-      <Card className="mb-8 sticky top-[80px] z-40 backdrop-blur-sm bg-white/90">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="mb-8 sticky top-[80px] z-40 backdrop-blur-sm bg-white/90">
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
             <div className="space-y-2">
@@ -77,30 +84,48 @@ const SpacesPage: React.FC<SpacesPageProps> = ({ onNavigate }) => {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
 
       {loading ? (
         <Spinner />
       ) : (
         <>
-          <p className="text-center text-gray-500 mb-8">{filteredSpaces.length} space{filteredSpaces.length !== 1 ? 's' : ''} found.</p>
+          <motion.p
+            className="text-center text-gray-500 mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            {filteredSpaces.length} space{filteredSpaces.length !== 1 ? 's' : ''} found.
+          </motion.p>
           {filteredSpaces.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredSpaces.map(space => (
-                <SpaceCard key={space.id} space={space} />
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              {filteredSpaces.map((space, index) => (
+                <SpaceCard key={space.id} space={space} index={index} />
               ))}
-            </div>
+            </motion.div>
           ) : (
-            <Card className="text-center py-16 px-6">
-              <CardContent>
-                <h3 className="text-2xl font-semibold text-gray-800">No Spaces Found</h3>
-                <p className="text-gray-500 mt-2">Try adjusting your filters to find available storage units.</p>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="text-center py-16 px-6">
+                <CardContent>
+                  <h3 className="text-2xl font-semibold text-gray-800">No Spaces Found</h3>
+                  <p className="text-gray-500 mt-2">Try adjusting your filters to find available storage units.</p>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
         </>
       )}
     </div>
   );
-};
+}
 
-export default SpacesPage;

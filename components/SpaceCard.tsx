@@ -1,16 +1,38 @@
+'use client';
+
 import React from 'react';
-import { Space, Page } from '../types';
+import Link from 'next/link';
+import { Space } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 interface SpaceCardProps {
   space: Space;
-  onNavigate: (page: Page, spaceId: string) => void;
+  index?: number;
 }
 
-const SpaceCard: React.FC<SpaceCardProps> = ({ space, onNavigate }) => {
+const SpaceCard: React.FC<SpaceCardProps> = ({ space, index = 0 }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col border border-gray-100 overflow-hidden group">
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        delay: index * 0.1,
+        duration: 0.5,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      whileHover={{ y: -8, transition: { duration: 0.3 } }}
+    >
+      <Card className="hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden group">
       <div className="relative overflow-hidden h-64">
-        <img className="h-full w-full object-cover transform group-hover:scale-105 transition-transform duration-500" src={space.images[0]} alt={space.name} />
+        <motion.img
+          className="h-full w-full object-cover"
+          src={space.images[0]}
+          alt={space.name}
+          whileHover={{ scale: 1.1 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         {!space.isAvailable && (
           <div className="absolute top-4 right-4 bg-red-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
@@ -26,7 +48,7 @@ const SpaceCard: React.FC<SpaceCardProps> = ({ space, onNavigate }) => {
           </p>
         </div>
       </div>
-      <div className="p-6 flex flex-col flex-grow">
+      <CardContent className="p-6 flex flex-col flex-grow">
         <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">{space.name}</h3>
         <div className="flex justify-between items-center text-gray-600 mb-6">
           <span className="flex items-center space-x-2 bg-gray-50 px-3 py-1 rounded-lg">
@@ -39,15 +61,17 @@ const SpaceCard: React.FC<SpaceCardProps> = ({ space, onNavigate }) => {
           <span className="text-2xl font-bold text-primary-600">${space.pricePerMonth}<span className="text-sm font-normal text-gray-500">/mo</span></span>
         </div>
         <div className="mt-auto">
-          <button
-            onClick={() => onNavigate('spaceDetail', space.id)}
-            className="w-full bg-gray-900 text-white font-semibold py-3 px-4 rounded-xl hover:bg-primary-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group-hover:scale-[1.02]"
-          >
-            View Details
-          </button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button asChild className="w-full">
+              <Link href={`/spaces/${space.id}`}>
+                View Details
+              </Link>
+            </Button>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
+    </motion.div>
   );
 };
 

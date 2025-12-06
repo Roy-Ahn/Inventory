@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Page } from '../types';
+import { Button } from '@/components/ui/button';
 
 interface HomePageProps {
   onNavigate: (page: Page) => void;
@@ -18,12 +19,13 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         <p className="max-w-2xl mx-auto text-lg md:text-xl mb-8 font-light" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.3)'}}>
           Find flexible, affordable, and secure storage solutions near you. From a single box to an entire garage, we have you covered.
         </p>
-        <button
+        <Button
           onClick={() => onNavigate('spaces')}
-          className="bg-white text-blue-600 font-bold py-3 px-8 rounded-full text-lg hover:bg-blue-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          size="lg"
+          className="bg-white text-blue-600 font-bold rounded-full text-lg hover:bg-blue-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
         >
           Find Your Space
-        </button>
+        </Button>
       </div>
        <style>{`
         @keyframes fade-in-up {

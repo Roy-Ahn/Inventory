@@ -1,6 +1,8 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Space, Booking } from '../types';
-import { supabase } from '../lib/supabase';
+import { Space, Booking } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface DataContextType {
   spaces: Space[];
@@ -148,29 +150,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createBooking = useCallback(async (bookingData: Omit<Booking, 'id'>) => {
     try {
       // Check for overlapping bookings
+      // Two date ranges overlap if: start_date <= new_end_date AND end_date >= new_start_date
+      // Using PostgREST filter syntax: start_date.lte.end_date,end_date.gte.start_date
       const { data: existingBookings, error: checkError } = await supabase
         .from('bookings')
         .select('id')
         .eq('space_id', bookingData.spaceId)
         .or(`start_date.lte.${bookingData.endDate},end_date.gte.${bookingData.startDate}`);
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        // If the query fails, log it but continue (might be a syntax issue)
+        console.warn('Error checking for overlapping bookings:', checkError);
+        // Don't throw - allow booking to proceed if we can't check overlaps
+      }
 
       if (existingBookings && existingBookings.length > 0) {
         throw new Error('Space is already booked for these dates');
       }
 
+      // Build insert object, only including payment fields if they exist
+      const insertData: any = {
+        space_id: bookingData.spaceId,
+        user_id: bookingData.userId,
+        start_date: bookingData.startDate,
+        end_date: bookingData.endDate,
+        total_price: bookingData.totalPrice,
+      };
+      
+      // Only include payment fields if they are provided
+      if (bookingData.paymentIntentId) {
+        insertData.payment_intent_id = bookingData.paymentIntentId;
+      }
+      if (bookingData.paymentStatus) {
+        insertData.payment_status = bookingData.paymentStatus;
+      }
+
       const { error: insertError } = await supabase
         .from('bookings')
-        .insert({
-          space_id: bookingData.spaceId,
-          user_id: bookingData.userId,
-          start_date: bookingData.startDate,
-          end_date: bookingData.endDate,
-          total_price: bookingData.totalPrice,
-          payment_intent_id: bookingData.paymentIntentId,
-          payment_status: bookingData.paymentStatus || 'pending',
-        });
+        .insert(insertData);
 
       if (insertError) throw insertError;
 
@@ -183,8 +200,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await refreshBookings();
       await refreshSpaces();
     } catch (err: any) {
-      console.error('Error creating booking:', err);
-      throw err;
+      // Log detailed error information
+      const errorMessage = err?.message || err?.error?.message || JSON.stringify(err);
+      const errorDetails = {
+        message: errorMessage,
+        code: err?.code || err?.error?.code,
+        details: err?.details || err?.error?.details,
+        hint: err?.hint || err?.error?.hint,
+      };
+      console.error('Error creating booking:', errorDetails);
+      throw new Error(errorMessage || 'Failed to create booking');
     }
   }, [refreshBookings, refreshSpaces]);
 

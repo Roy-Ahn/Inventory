@@ -10,6 +10,11 @@ import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '../components/CheckoutForm';
 import { supabase } from '../lib/supabase';
 import { ReviewSection } from '../components/ReviewSection';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Make sure to call loadStripe outside of a component’s render to avoid
 // recreating the Stripe object on every render.
@@ -136,14 +141,14 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
 
   return (
     <div className="container mx-auto px-6 py-12">
-      <button onClick={() => onNavigate('spaces')} className="mb-8 text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-2">
+      <Button onClick={() => onNavigate('spaces')} variant="ghost" className="mb-8">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
         <span>Back to Spaces</span>
-      </button>
+      </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <Card className="overflow-hidden">
             <img src={mainImage || space.images[0]} alt="Main view" className="w-full h-96 object-cover transition-opacity duration-300" />
             <div className="flex p-2 space-x-2 bg-gray-100">
               {space.images.map((img, index) => (
@@ -156,106 +161,132 @@ const SpaceDetailPage: React.FC<SpaceDetailPageProps> = ({ spaceId, onNavigate }
                 />
               ))}
             </div>
-          </div>
-          <div className="mt-8 bg-white p-8 rounded-2xl shadow-lg">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Description</h2>
-            <p className="text-gray-600 leading-relaxed">{space.description}</p>
-          </div>
+          </Card>
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Description</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 leading-relaxed">{space.description}</p>
+            </CardContent>
+          </Card>
 
-          <div className="mt-8 bg-white p-8 rounded-2xl shadow-lg">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Location</h2>
-            <div className="w-full h-80 rounded-lg overflow-hidden border border-gray-200">
-              <iframe
-                title="Space Location"
-                src={`https://maps.google.com/maps?q=${encodeURIComponent(space.location)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen={false}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
-            </div>
-          </div>
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full h-80 rounded-lg overflow-hidden border border-gray-200">
+                <iframe
+                  title="Space Location"
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(space.location)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen={false}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                ></iframe>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="mt-8 bg-white p-8 rounded-2xl shadow-lg">
-            <ReviewSection spaceId={space.id} />
-          </div>
+          <Card className="mt-8">
+            <CardContent className="p-8">
+              <ReviewSection spaceId={space.id} />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="lg:col-span-2">
           <div className="sticky top-28">
-            <div className="bg-white p-8 rounded-2xl shadow-lg">
-              <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{space.name}</h1>
-              <p className="text-gray-500 mb-4">{space.location}</p>
-              <div className="flex justify-between items-center border-t border-b border-gray-200 py-4 my-4">
-                <div>
-                  <p className="text-sm text-gray-500">Size</p>
-                  <p className="font-bold text-lg">{space.size} sq ft</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-3xl">{space.name}</CardTitle>
+                <CardDescription>{space.location}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center border-t border-b border-gray-200 py-4 my-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Size</p>
+                    <p className="font-bold text-lg">{space.size} sq ft</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Price</p>
+                    <p className="font-bold text-lg text-blue-600">${space.pricePerMonth} / month</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Price</p>
-                  <p className="font-bold text-lg text-blue-600">${space.pricePerMonth} / month</p>
+                <div className="mb-6">
+                  <h3 className="font-bold text-lg mb-2 text-gray-800">Features</h3>
+                  <ul className="space-y-2">
+                    {space.features.map((feature, i) => (
+                      <li key={i} className="flex items-center text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-              <div className="mb-6">
-                <h3 className="font-bold text-lg mb-2 text-gray-800">Features</h3>
-                <ul className="space-y-2">
-                  {space.features.map((feature, i) => (
-                    <li key={i} className="flex items-center text-gray-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-                <h2 className="text-xl font-bold text-center mb-4 text-gray-800">Book This Space</h2>
-                {!currentUser ? (
-                  <div className="text-center">
-                    <p className="text-gray-600 mb-4">You must be logged in to book a space.</p>
-                    <button onClick={() => onNavigate('login')} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
-                      Login to Book
-                    </button>
-                  </div>
-                ) : space.isAvailable ? (
-                  <>
-                    {!clientSecret ? (
-                      <form onSubmit={initiateBooking}>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">Start Date</label>
-                            <input type="date" id="start-date" required value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
-                          </div>
-                          <div>
-                            <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">End Date</label>
-                            <input type="date" id="end-date" required value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
-                          </div>
-                        </div>
-                        <div className="text-center bg-white p-3 rounded-lg mb-4">
-                          <p className="text-sm text-gray-500">Estimated Total</p>
-                          <p className="text-2xl font-bold text-blue-600">${totalPrice}</p>
-                        </div>
-                        {bookingError && <p className="text-red-500 text-sm mb-2 text-center">{bookingError}</p>}
-                        <button type="submit" disabled={bookingStatus === 'booking'} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400">
-                          {bookingStatus === 'booking' ? 'Processing...' : 'Book Now'}
-                        </button>
-                      </form>
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="text-center">Book This Space</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!currentUser ? (
+                      <div className="text-center">
+                        <p className="text-gray-600 mb-4">You must be logged in to book a space.</p>
+                        <Button onClick={() => onNavigate('login')} className="w-full">
+                          Login to Book
+                        </Button>
+                      </div>
+                    ) : space.isAvailable ? (
+                      <>
+                        {!clientSecret ? (
+                          <form onSubmit={initiateBooking}>
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="start-date">Start Date</Label>
+                                <Input type="date" id="start-date" required value={startDate} onChange={e => setStartDate(e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="end-date">End Date</Label>
+                                <Input type="date" id="end-date" required value={endDate} onChange={e => setEndDate(e.target.value)} />
+                              </div>
+                            </div>
+                            <div className="text-center bg-white p-3 rounded-lg mb-4">
+                              <p className="text-sm text-gray-500">Estimated Total</p>
+                              <p className="text-2xl font-bold text-blue-600">${totalPrice}</p>
+                            </div>
+                            {bookingError && (
+                              <Alert variant="destructive" className="mb-2">
+                                <AlertDescription>{bookingError}</AlertDescription>
+                              </Alert>
+                            )}
+                            <Button type="submit" disabled={bookingStatus === 'booking'} className="w-full">
+                              {bookingStatus === 'booking' ? 'Processing...' : 'Book Now'}
+                            </Button>
+                          </form>
+                        ) : (
+                          <Elements options={options} stripe={stripePromise}>
+                            <CheckoutForm amount={parseFloat(totalPrice)} onSuccess={handlePaymentSuccess} onError={handlePaymentError} />
+                          </Elements>
+                        )}
+                        {bookingStatus === 'success' && (
+                          <Alert className="mt-4">
+                            <AlertDescription className="text-green-600 font-semibold">Booking successful! Redirecting...</AlertDescription>
+                          </Alert>
+                        )}
+                      </>
                     ) : (
-                      <Elements options={options} stripe={stripePromise}>
-                        <CheckoutForm amount={parseFloat(totalPrice)} onSuccess={handlePaymentSuccess} onError={handlePaymentError} />
-                      </Elements>
+                      <Alert variant="destructive">
+                        <AlertDescription className="font-bold">This space is currently unavailable.</AlertDescription>
+                      </Alert>
                     )}
-                    {bookingStatus === 'success' && <p className="text-green-600 mt-4 text-center font-semibold">Booking successful! Redirecting...</p>}
-                  </>
-                ) : (
-                  <div className="text-center p-4 bg-red-100 border border-red-200 rounded-lg">
-                    <p className="font-bold text-red-700">This space is currently unavailable.</p>
-                  </div>
-                )}
-              </div>
-            </div>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

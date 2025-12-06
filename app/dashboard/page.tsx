@@ -1,26 +1,25 @@
+'use client';
 
 import React, { useMemo } from 'react';
-import { Booking, Space, Page } from '../types';
-import Spinner from '../components/Spinner';
-import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
+import { useRouter } from 'next/navigation';
+import { Booking, Space } from '@/types';
+import Spinner from '@/components/Spinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface DashboardPageProps {
-  onNavigate: (page: Page, spaceId?: string) => void;
-}
+import { motion } from 'framer-motion';
 
 interface PopulatedBooking {
   booking: Booking;
   space?: Space;
 }
 
-const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
+export default function DashboardPage() {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const { bookings: allBookings, spaces, isLoading: loading } = useData();
 
-  // Filter bookings for current user and populate with space data
   const bookings = useMemo<PopulatedBooking[]>(() => {
     if (!currentUser) return [];
     
@@ -33,31 +32,46 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   }, [allBookings, spaces, currentUser]);
 
   if (!currentUser) {
-    // This case is handled by router in App.tsx, but as a fallback:
     return (
-        <div className="text-center py-20">
-            <p>Please log in to see your dashboard.</p>
-            <Button onClick={() => onNavigate('login')} className="mt-4">
-                Login
-            </Button>
-        </div>
-    )
+      <div className="text-center py-20">
+        <p>Please log in to see your dashboard.</p>
+        <Button onClick={() => router.push('/login')} className="mt-4">
+          Login
+        </Button>
+      </div>
+    );
   }
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen">
       <div className="container mx-auto px-6 py-12">
-        <div className="mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-10"
+        >
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">My Dashboard</h1>
           <p className="mt-2 text-lg text-gray-600">Welcome back, {currentUser.name}. Here are your bookings.</p>
-        </div>
+        </motion.div>
 
         {loading ? (
           <Spinner />
         ) : bookings.length > 0 ? (
           <div className="space-y-6">
-            {bookings.map(({ booking, space }) => (
-              <Card key={booking.id} className="transition-all duration-300 hover:shadow-xl">
+            {bookings.map(({ booking, space }, index) => (
+              <motion.div
+                key={booking.id}
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{
+                  delay: index * 0.1,
+                  duration: 0.5,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                whileHover={{ x: 8, transition: { duration: 0.3 } }}
+              >
+                <Card className="transition-all duration-300 hover:shadow-xl">
                 <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
                   <img src={space?.images[0] || 'https://picsum.photos/200'} alt={space?.name || 'Storage Space'} className="w-full md:w-48 h-32 object-cover rounded-xl"/>
                   <div className="flex-grow text-center md:text-left">
@@ -71,7 +85,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   </div>
                   <div className="flex-shrink-0">
                     <Button 
-                      onClick={() => space && onNavigate('spaceDetail', space.id)} 
+                      onClick={() => space && router.push(`/spaces/${space.id}`)} 
                       variant="secondary"
                       disabled={!space}
                     >
@@ -80,24 +94,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   </div>
                 </CardContent>
               </Card>
+              </motion.div>
             ))}
           </div>
         ) : (
-          <Card className="text-center py-16 px-6">
-            <CardHeader>
-              <CardTitle>No Bookings Yet</CardTitle>
-              <CardDescription>You haven't booked any storage spaces. Ready to find one?</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => onNavigate('spaces')} className="mt-6">
-                Find a Space
-              </Button>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="text-center py-16 px-6">
+              <CardHeader>
+                <CardTitle>No Bookings Yet</CardTitle>
+                <CardDescription>You haven't booked any storage spaces. Ready to find one?</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button onClick={() => router.push('/spaces')} className="mt-6">
+                    Find a Space
+                  </Button>
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </div>
     </div>
   );
-};
+}
 
-export default DashboardPage;

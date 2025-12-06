@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { Review } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { Review } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ReviewSectionProps {
     spaceId: string;
@@ -39,15 +41,23 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ spaceId }) => {
             // Get unique user IDs
             const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
 
-            // Fetch user data from auth.users
-            const { data: usersData, error: usersError } = await supabase
-                .from('users')
-                .select('id, name')
-                .in('id', userIds);
-
-            if (usersError) {
-                console.error('Error fetching users:', usersError);
-                // Continue without user data
+            // Fetch user data from profiles table (fallback to empty if table doesn't exist)
+            let usersData = null;
+            let usersError = null;
+            
+            if (userIds.length > 0) {
+                const result = await supabase
+                    .from('profiles')
+                    .select('id, name')
+                    .in('id', userIds);
+                
+                usersData = result.data;
+                usersError = result.error;
+                
+                // Only log error if it's a meaningful error (not just table doesn't exist)
+                if (usersError && usersError.code !== 'PGRST116' && usersError.message) {
+                    console.error('Error fetching user profiles:', usersError.message || usersError);
+                }
             }
 
             // Map user data to reviews

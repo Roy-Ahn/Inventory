@@ -1,7 +1,8 @@
+'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import { User, Role } from '../types';
-import { supabase } from '../lib/supabase';
+import { User, Role } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -160,6 +161,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (updateError) throw updateError;
+
+      // Also update the profiles table (in case trigger doesn't fire)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ name, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      // Don't throw on profile error - it's not critical if profiles table doesn't exist yet
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.warn('Failed to update profile table:', profileError.message);
+      }
 
       // Reload user to get updated data
       const { data: { user: updatedUser } } = await supabase.auth.getUser();

@@ -3,6 +3,11 @@ import { Page } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import Spinner from '../components/Spinner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ProfilePageProps {
   onNavigate: (page: Page) => void;
@@ -67,12 +72,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
     return (
       <div className="text-center py-20">
         <p className="text-gray-600 mb-4">Please log in to view your profile.</p>
-        <button 
-          onClick={() => onNavigate('login')} 
-          className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-        >
+        <Button onClick={() => onNavigate('login')}>
           Login
-        </button>
+        </Button>
       </div>
     );
   }
@@ -96,144 +98,131 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
           </div>
 
           {/* Profile Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Account Information</h2>
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-                >
-                  Edit Profile
-                </button>
-              )}
-            </div>
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Account Information</CardTitle>
+                {!isEditing && (
+                  <Button onClick={() => setIsEditing(true)}>
+                    Edit Profile
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
 
             {isEditing ? (
               <form onSubmit={handleSave} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
                     id="name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter your name"
                     disabled={isSaving}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
                     type="email"
                     value={currentUser.email}
                     disabled
-                    className="block w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-500"
+                    className="bg-gray-100 text-gray-500"
                   />
-                  <p className="mt-1 text-sm text-gray-500">Email cannot be changed</p>
+                  <p className="text-sm text-gray-500">Email cannot be changed</p>
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                    {error}
-                  </div>
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
 
                 {success && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                    {success}
-                  </div>
+                  <Alert>
+                    <AlertDescription>{success}</AlertDescription>
+                  </Alert>
                 )}
 
                 <div className="flex space-x-4">
-                  <button
+                  <Button
                     type="submit"
                     disabled={isSaving}
-                    className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors duration-300 disabled:bg-gray-400"
                   >
                     {isSaving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={handleCancel}
                     disabled={isSaving}
-                    className="bg-gray-200 text-gray-700 font-semibold py-2 px-5 rounded-lg hover:bg-gray-300 transition-colors duration-300"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             ) : (
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
                   <p className="text-lg text-gray-900">{currentUser.name}</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
+                <div className="space-y-2">
+                  <Label>Email</Label>
                   <p className="text-lg text-gray-900">{currentUser.email}</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    User ID
-                  </label>
+                <div className="space-y-2">
+                  <Label>User ID</Label>
                   <p className="text-sm text-gray-500 font-mono">{currentUser.id}</p>
                 </div>
 
                 {success && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                    {success}
-                  </div>
+                  <Alert>
+                    <AlertDescription>{success}</AlertDescription>
+                  </Alert>
                 )}
               </div>
             )}
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Statistics Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Statistics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-blue-50 rounded-xl p-6">
-                <div className="text-3xl font-bold text-blue-600 mb-2">{userBookings.length}</div>
-                <div className="text-gray-600">Total Bookings</div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-blue-50 rounded-xl p-6">
+                  <div className="text-3xl font-bold text-blue-600 mb-2">{userBookings.length}</div>
+                  <div className="text-gray-600">Total Bookings</div>
+                </div>
+                <div className="bg-green-50 rounded-xl p-6">
+                  <div className="text-3xl font-bold text-green-600 mb-2">{activeBookings}</div>
+                  <div className="text-gray-600">Active Bookings</div>
+                </div>
+                <div className="bg-purple-50 rounded-xl p-6">
+                  <div className="text-3xl font-bold text-purple-600 mb-2">${totalSpent.toFixed(2)}</div>
+                  <div className="text-gray-600">Total Spent</div>
+                </div>
               </div>
-              <div className="bg-green-50 rounded-xl p-6">
-                <div className="text-3xl font-bold text-green-600 mb-2">{activeBookings}</div>
-                <div className="text-gray-600">Active Bookings</div>
-              </div>
-              <div className="bg-purple-50 rounded-xl p-6">
-                <div className="text-3xl font-bold text-purple-600 mb-2">${totalSpent.toFixed(2)}</div>
-                <div className="text-gray-600">Total Spent</div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Quick Actions */}
           <div className="mt-8 flex justify-center space-x-4">
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="bg-blue-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-            >
+            <Button onClick={() => onNavigate('dashboard')}>
               View My Dashboard
-            </button>
-            <button
-              onClick={() => onNavigate('spaces')}
-              className="bg-gray-200 text-gray-700 font-semibold py-2 px-5 rounded-lg hover:bg-gray-300 transition-colors duration-300"
-            >
+            </Button>
+            <Button variant="secondary" onClick={() => onNavigate('spaces')}>
               Browse Spaces
-            </button>
+            </Button>
           </div>
         </div>
       </div>
